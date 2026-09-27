@@ -4,6 +4,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct tarpit_generator tarpit_generator;
 
 typedef struct {
@@ -40,5 +44,9 @@ void tarpit_close(tarpit_generator *generator);
 int tarpit_generate(const tarpit_generator *generator, const char *token,
                     uint64_t nonce, tarpit_page *page);
 void tarpit_page_free(tarpit_page *page);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
