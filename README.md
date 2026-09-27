@@ -1,8 +1,6 @@
 # libtarpit
 
-A small C text generator for application-level crawl traps. It generates a coherent excerpt, an endless next-link token, a changing link label, and a suggested response delay. It does no networking or sleeping: your application chooses when to send the response and how to render links.
-
-The design is based on observations of `gemini://buffering.party/tarpit/`: an ever-advancing link token, delay that grows with token length, and attributed book text on deeper pages. This implementation selects different contiguous passages and can insert sparse zero width Unicode characters into prose so pages vary at the byte level - to punish misbehaving crawlers as naive prefix caching and raw search doesn't work.
+A small C text generator for application level crawl traps. Generating an endless a coherent excerpt, next-link token and a changing link label. Plus a a suggested response delay and anti-prefix compression. The design is based on observations of `gemini://buffering.party/tarpit/` that traps some of my crawlers (due to my own bugs) and I find the idea interesting.
 
 ## Build
 
