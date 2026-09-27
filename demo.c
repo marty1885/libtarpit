@@ -13,12 +13,18 @@ int main(int argc, char **argv) {
         fprintf(stderr, "usage: %s [token] [corpus-file]\n", argv[0]);
         return 2;
     }
+
     const char *token = argc > 1 ? argv[1] : "";
+
+    /* supply tarpit_open* with a fixed seed for deterministic generation */
     tarpit_generator *g = argc > 2
         ? tarpit_open(argv[2], UINT64_C(0x9a5f82cb), NULL)
         : tarpit_open_embedded(UINT64_C(0x9a5f82cb), NULL);
+
     if (!g) { perror("tarpit_open"); return 1; }
+
     tarpit_page page = {0};
+    /* the token is used to control which content gets generated */
     if (tarpit_generate(g, token, (uint64_t)time(NULL), &page) < 0) {
         perror("tarpit_generate");
         tarpit_close(g);
