@@ -13,6 +13,7 @@ typedef struct tarpit_generator tarpit_generator;
 typedef struct {
     /* Expected insertions per 1000 eligible characters; 0 disables them. */
     unsigned zero_width_per_mille;
+    /* Base prose byte budget. Text is empty if the first code point cannot fit. */
     size_t excerpt_bytes;
     unsigned delay_per_token_char_ms;
     unsigned max_delay_ms;
@@ -39,6 +40,8 @@ void tarpit_close(tarpit_generator *generator);
  * token is the current path component, or "" for the entry page.
  * nonce should change for each response if byte variation is desired.
  * The generator is read-only after open, so concurrent generate calls are safe.
+ * On success, page receives owned strings. Free them with tarpit_page_free
+ * before reusing the same page. On failure, page is unchanged.
  * Returns 0 on success, -1 with errno set on failure.
  */
 int tarpit_generate(const tarpit_generator *generator, const char *token,

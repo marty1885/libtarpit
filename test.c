@@ -27,7 +27,44 @@ static void remove_invisible(char *s) {
     *out = 0;
 }
 
+static int check_excerpt(const char *corpus, size_t budget, const char *token,
+                         const char *expected) {
+    char path[] = "/tmp/libtarpit-excerpt-XXXXXX";
+    int fd = mkstemp(path);
+    CHECK(fd >= 0);
+    FILE *file = fdopen(fd, "wb");
+    CHECK(file);
+    CHECK(fputs(corpus, file) >= 0);
+    CHECK(fclose(file) == 0);
+    tarpit_options opt = tarpit_default_options();
+    opt.zero_width_per_mille = 0;
+    opt.excerpt_bytes = budget;
+    tarpit_generator *gen = tarpit_open(path, 1, &opt);
+    CHECK(unlink(path) == 0);
+    CHECK(gen);
+    tarpit_page page = {0};
+    CHECK(tarpit_generate(gen, token, 0, &page) == 0);
+    CHECK(strcmp(page.text, expected) == 0);
+    tarpit_page_free(&page);
+    tarpit_close(gen);
+    return 0;
+}
+
 int main(void) {
+    CHECK(check_excerpt("\xc3\xa9", 1, "", "") == 0);
+    CHECK(check_excerpt("a\xf0\x9f\x98\x80", 4, "", "a\n\n") == 0);
+    CHECK(check_excerpt("a\xf0\x9f\x98\x80", 5, "", "a\xf0\x9f\x98\x80\n\n") == 0);
+    /* Identical paragraphs make these checks independent of passage selection. */
+    CHECK(check_excerpt("a\nb\n\na\nb", 4, "", "a b\n\n") == 0);
+    CHECK(check_excerpt("a\r\nb\r\n \t\r\na\r\nb", 4, "", "a b\n\n") == 0);
+    CHECK(check_excerpt("a\r\nb", 3, "", "a b\n\n") == 0);
+
+    static char long_paragraph[65537], expected[65538];
+    memset(long_paragraph, 'x', 65536);
+    memset(expected, 'x', 65535);
+    memcpy(expected + 65535, "\n\n", 3);
+    CHECK(check_excerpt(long_paragraph, 21845, "000", expected) == 0);
+
     tarpit_options plain_opt = tarpit_default_options();
     plain_opt.zero_width_per_mille = 0;
     tarpit_options marked_opt = plain_opt;
