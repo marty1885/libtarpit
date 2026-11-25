@@ -128,17 +128,30 @@ static tarpit_generator *open_corpus(const char *data, size_t length,
     }
     g->corpus = malloc(length + 1);
     if (!g->corpus) { tarpit_close(g); return NULL; }
-    memcpy(g->corpus, data, length);
+    size_t normalized = 0;
+    for (size_t i = 0; i < length; i++) {
+        if (data[i] == '\r' && i + 1 < length && data[i+1] == '\n') continue;
+        g->corpus[normalized++] = data[i];
+    }
+    length = normalized;
     g->corpus[length] = '\0';
     size_t capacity = 0, start = 0;
-    for (size_t i = 0; i + 1 < length; i++) {
-        if (g->corpus[i] == '\n' && g->corpus[i+1] == '\n') {
-            if (add_paragraph(g, start, i, &capacity) < 0) {
+    size_t line_start = 0;
+    int blank = 1;
+    for (size_t i = 0; i < length; i++) {
+        char c = g->corpus[i];
+        if (c != '\n') {
+            if (c != ' ' && c != '\t') blank = 0;
+            continue;
+        }
+        if (blank) {
+            if (add_paragraph(g, start, line_start, &capacity) < 0) {
                 tarpit_close(g); return NULL;
             }
-            while (i + 1 < length && g->corpus[i+1] == '\n') i++;
             start = i + 1;
         }
+        line_start = i + 1;
+        blank = 1;
     }
     if (add_paragraph(g, start, length, &capacity) < 0) {
         tarpit_close(g); return NULL;
@@ -241,7 +254,7 @@ int tarpit_generate(const tarpit_generator *g, const char *token,
 
     size_t target = g->options.excerpt_bytes;
     /* Larger pages as the link token grows, with a fixed memory ceiling. */
-    if (token_length > 1 && target < MAX_EXCERPT / token_length)
+    if (token_length > 1 && target <= MAX_EXCERPT / token_length)
         target *= token_length;
     else if (token_length > 1)
         target = MAX_EXCERPT;
@@ -258,7 +271,12 @@ int tarpit_generate(const tarpit_generator *g, const char *token,
         /* Preserve whole paragraphs except an unusually long final one. */
         size_t take = p.length;
         if (take > target - plain && plain > 0) break;
-        if (take > target - plain) take = target - plain;
+        if (take > target - plain) {
+            take = target - plain;
+            while (take && ((unsigned char)g->corpus[p.start + take] & 0xc0) == 0x80)
+                take--;
+            if (!take) break;
+        }
         for (size_t i = 0; i < take; i++) {
             unsigned char c = (unsigned char)g->corpus[p.start+i];
             if (c == '\r' || c == '\n') {
