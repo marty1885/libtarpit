@@ -32,7 +32,7 @@ if (tarpit_generate(gen, path_token, request_nonce, &page) == 0) {
 tarpit_close(gen);
 ```
 
-Pass a fresh `request_nonce` to vary both passage selection and invisible character positions between requests. Use a stable nonce to reproduce the same output. `tarpit_generate` is safe to call concurrently after `tarpit_open`. The token alphabet is `0-9a-zA-Z-_` and the maximum token length is 64. At the final length, counter overflow returns `EOVERFLOW` instead of growing without bound. The default excerpt is 8 KiB times token length, capped at 64 KiB. The delay is one second per token character, capped at ten seconds.
+Pass a fresh `request_nonce` to vary both passage selection and invisible character positions between requests. Use a stable nonce to reproduce the same output. `tarpit_generate` is safe to call concurrently after `tarpit_open`. The token is a plain counter over the digits `0-9a-zA-Z`: `0`, `1`, ... `Z`, `00`, `01`, ... up to 64 characters. At the final length, counter overflow returns `EOVERFLOW` instead of growing without bound. The default excerpt is 8 KiB times token length, capped at 64 KiB. The delay is one second per token character, capped at ten seconds.
 
 Zero width marks make copied text harder to compare or search and can affect screen readers. Set `zero_width_per_mille` to zero when you need plain text. The generator only inserts marks in its prose; it leaves tokens and link labels untouched so routing remains reliable. Serve this only to traffic you have chosen to tarpit, and keep normal pages accessible without these marks.
 

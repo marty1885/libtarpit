@@ -47,7 +47,10 @@ int main(void) {
     CHECK(strcmp(a.text, b.text) == 0);
     rc = tarpit_generate(plain, "Z", 42, &c);
     CHECK(rc == 0);
-    CHECK(strcmp(c.next_token, "-") == 0);
+    CHECK(strcmp(c.next_token, "00") == 0);
+    tarpit_page_free(&c);
+    rc = tarpit_generate(plain, "Z-", 42, &c);
+    CHECK(rc == -1);
     tarpit_page_free(&c);
     rc = tarpit_generate(plain, "10", 42, &c);
     CHECK(rc == 0);
@@ -72,6 +75,28 @@ int main(void) {
     CHECK(rc == 0);
     CHECK(invalid == NULL);
     CHECK(invalid_errno == EILSEQ);
+
+    /* A paragraph longer than the excerpt is cut on a character boundary. */
+    char long_path[] = "/tmp/libtarpit-long-XXXXXX";
+    int long_file = mkstemp(long_path);
+    CHECK(long_file >= 0);
+    for (int i = 0; i < 100; i++) {
+        written = write(long_file, "\xC3\xA9", 2);
+        CHECK(written == 2);
+    }
+    rc = close(long_file);
+    CHECK(rc == 0);
+    tarpit_options cut_opt = plain_opt;
+    cut_opt.excerpt_bytes = 7;
+    tarpit_generator *cut = tarpit_open(long_path, 123, &cut_opt);
+    rc = unlink(long_path);
+    CHECK(rc == 0);
+    CHECK(cut != NULL);
+    rc = tarpit_generate(cut, "", 42, &c);
+    CHECK(rc == 0);
+    CHECK(strcmp(c.text, "\xC3\xA9\xC3\xA9\xC3\xA9\n\n") == 0);
+    tarpit_page_free(&c);
+    tarpit_close(cut);
 
     tarpit_page_free(&a);
     tarpit_page_free(&b);

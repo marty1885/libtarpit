@@ -23,7 +23,7 @@ struct tarpit_generator {
 };
 
 static const char alphabet[] =
-    "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_";
+    "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 static const char *labels[] = {
     "Continue reading", "There is more ahead", "Follow the next passage",
     "The account continues", "Turn to the next page", "Read a little further",
@@ -258,7 +258,12 @@ int tarpit_generate(const tarpit_generator *g, const char *token,
         /* Preserve whole paragraphs except an unusually long final one. */
         size_t take = p.length;
         if (take > target - plain && plain > 0) break;
-        if (take > target - plain) take = target - plain;
+        if (take > target - plain) {
+            take = target - plain;
+            /* Never cut a UTF-8 sequence: back up to a character boundary. */
+            while (take > 0 &&
+                   ((unsigned char)g->corpus[p.start+take] & 0xc0) == 0x80) take--;
+        }
         for (size_t i = 0; i < take; i++) {
             unsigned char c = (unsigned char)g->corpus[p.start+i];
             if (c == '\r' || c == '\n') {
